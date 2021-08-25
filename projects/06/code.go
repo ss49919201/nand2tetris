@@ -35,7 +35,7 @@ func (c *code) dest(dm string) [3]byte {
 func (c *code) comp(cm string) [7]byte {
 	switch cm {
 	case "0":
-		return [7]byte{0, 1, 0, 1, 0, 0, 0}
+		return [7]byte{0, 1, 0, 1, 0, 1, 0}
 	case "1":
 		return [7]byte{0, 1, 1, 1, 1, 1, 1}
 	case "-1":
@@ -91,7 +91,7 @@ func (c *code) comp(cm string) [7]byte {
 	case "D|M":
 		return [7]byte{1, 0, 1, 0, 1, 0, 1}
 	default:
-		panic("not jump Mnemonic")
+		panic("not comp Mnemonic")
 	}
 }
 

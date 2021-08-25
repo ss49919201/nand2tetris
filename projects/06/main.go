@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+func isInt(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
+}
+
 func main() {
 	purser := newPurser()
 	defer purser.file.Close()
@@ -26,10 +31,11 @@ func main() {
 					println()
 				} else {
 					// シンボルの場合
-					println("symbol=", purser.symbol())
+					fmt.Println("symbol=", purser.symbol())
 				}
 			case C_COMMAND:
 				println()
+				println(cm)
 				b := make([]byte, 0, 16)
 				b = append(b, []byte{1, 1, 1}...)
 
