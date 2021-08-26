@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -83,7 +82,7 @@ func (p *purser) symbol() string {
 		return s
 	case "(":
 		s := strings.TrimLeft(c, "(")
-		s = strings.TrimRight(c, ")")
+		s = strings.TrimRight(s, ")")
 		return s
 	default:
 		panic("not symbol")
@@ -107,10 +106,7 @@ func (p *purser) dest() string {
 // コマンドがC_COMMANDの時だけ呼ぶ
 func (p *purser) comp() string {
 	c := strings.Trim(p.command, " ")
-	fmt.Println(c)
 	cs := strings.Split(c, " ")
-	fmt.Println(cs)
-	fmt.Println(cs[0])
 
 	if !strings.Contains(string(cs[0]), "=") {
 		if !strings.Contains(string(cs[0]), ";") {
