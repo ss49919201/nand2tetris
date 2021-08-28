@@ -21,12 +21,12 @@ const (
 )
 
 type parser struct {
-	file    *os.File
+	input   *os.File
 	scanner *bufio.Scanner
 	command string
 }
 
-func newParser() *parser {
+func newParser(file *os.File) *parser {
 	// fileを開く
 	filePath := os.Args[1]
 	file, err := os.Open(filePath)
@@ -35,7 +35,7 @@ func newParser() *parser {
 	}
 	scanner := bufio.NewScanner(file)
 	return &parser{
-		file:    file,
+		input:   file,
 		scanner: scanner,
 	}
 }
@@ -47,7 +47,10 @@ func (p *parser) hasMoreCommands() bool {
 
 // 次のコマンドを読み現在のコマンドにする
 func (p *parser) advance() {
-	p.command = strings.Trim(p.scanner.Text(), " ")
+	// 左端の半角スペースを取り除く
+	c := strings.Trim(p.scanner.Text(), " ")
+
+	p.command = c
 }
 
 // 現在のコマンドの種類を返す
@@ -84,18 +87,14 @@ func (p *parser) commandType() command {
 	}
 }
 
+// 第1引数を返す
 func (p *parser) arg1() string {
 	if p.commandType() == C_RETURN {
 		panic("invalid command C_RETURN")
 	}
 
-	c := p.command
-	var cs []string
-	if strings.Contains(c, " ") {
-		cs = strings.Split(c, " ")
-	} else {
-		cs = append(cs, c)
-	}
+	c := trimComment(p.command)
+	cs := splitByHalfSpace(c)
 
 	if p.commandType() == C_ARITHMETIC {
 		return cs[0]
@@ -103,6 +102,7 @@ func (p *parser) arg1() string {
 	return cs[1]
 }
 
+// 第2引数を返す
 func (p *parser) arg2() string {
 	switch p.commandType() {
 	case C_POP, C_PUSH, C_FUNCTION, C_CALL:
@@ -111,18 +111,31 @@ func (p *parser) arg2() string {
 		panic("invalid command")
 	}
 
-	c := p.command
-	var cs []string
-	if strings.Contains(c, " ") {
-		cs = strings.Split(c, " ")
-	} else {
-		cs = append(cs, c)
+	c := trimComment(p.command)
+	cs := splitByHalfSpace(c)
+	if len(cs) == 3 {
+		panic("invalid command")
 	}
 
 	return cs[2]
 }
 
-// 入力にまだコマンドが存在するか
+// 入力ファイルをCloseする
 func (p *parser) close() {
-	p.file.Close()
+	p.input.Close()
+}
+
+func splitByHalfSpace(s string) []string {
+	if strings.Contains(s, " ") {
+		return strings.Split(s, " ")
+	}
+
+	return []string{s}
+}
+
+// コマンドと同じ行のコメントを取り除く
+func trimComment(src string) string {
+	ss := strings.Split(src, "//")
+	ss[len(ss)-1] = strings.TrimRight(ss[len(ss)-1], " ")
+	return ss[0]
 }
