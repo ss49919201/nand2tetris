@@ -1,4 +1,4 @@
-module nand2tetris-06
+module assembler
 
 go 1.17
 
