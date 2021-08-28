@@ -20,23 +20,23 @@ func printBin(b []byte) {
 }
 
 func makeSymbolTable(symbolTable *symbolTable) {
-	purser := newPurser()
-	defer purser.file.Close()
+	parser := newParser()
+	defer parser.file.Close()
 
 	var commandIndex int
 	for {
-		cm := purser.command
+		cm := parser.command
 		if len(cm) > 0 {
-			switch purser.commandType() {
+			switch parser.commandType() {
 			case A_COMMAND, C_COMMAND:
 				commandIndex++
 			case L_COMMAND:
-				symbolTable.addEntry(purser.symbol(), commandIndex)
+				symbolTable.addEntry(parser.symbol(), commandIndex)
 			}
 		}
 
-		if purser.hasMoreCommands() {
-			purser.advance()
+		if parser.hasMoreCommands() {
+			parser.advance()
 			continue
 		}
 		break
@@ -44,45 +44,45 @@ func makeSymbolTable(symbolTable *symbolTable) {
 }
 
 func makeBin(symbolTable *symbolTable) {
-	purser := newPurser()
-	defer purser.file.Close()
+	parser := newParser()
+	defer parser.file.Close()
 
 	code := newCode()
 
 	newSymbolIndex := 16
 
 	for {
-		cm := purser.command
+		cm := parser.command
 		if len(cm) > 0 {
-			switch purser.commandType() {
+			switch parser.commandType() {
 			case A_COMMAND:
 				var s string
 				// 数値の場合
-				if i, err := strconv.Atoi(purser.symbol()); err == nil {
+				if i, err := strconv.Atoi(parser.symbol()); err == nil {
 					// 15bitの2進数に変換
 					s = fmt.Sprintf("%015b", i)
 				} else {
 					// シンボルの場合
-					if !symbolTable.contains(purser.symbol()) {
-						symbolTable.addEntry(purser.symbol(), newSymbolIndex)
+					if !symbolTable.contains(parser.symbol()) {
+						symbolTable.addEntry(parser.symbol(), newSymbolIndex)
 						newSymbolIndex++
 					}
-					s = fmt.Sprintf("%015b", symbolTable.getAddress(purser.symbol()))
+					s = fmt.Sprintf("%015b", symbolTable.getAddress(parser.symbol()))
 				}
 				fmt.Println("0" + s)
 			case C_COMMAND:
 				b := make([]byte, 0, 16)
 				b = append(b, []byte{1, 1, 1}...)
 
-				for _, v := range code.comp(purser.comp()) {
+				for _, v := range code.comp(parser.comp()) {
 					b = append(b, v)
 				}
 
-				for _, v := range code.dest(purser.dest()) {
+				for _, v := range code.dest(parser.dest()) {
 					b = append(b, v)
 				}
 
-				for _, v := range code.jump(purser.jump()) {
+				for _, v := range code.jump(parser.jump()) {
 					b = append(b, v)
 				}
 
@@ -91,8 +91,8 @@ func makeBin(symbolTable *symbolTable) {
 			}
 		}
 
-		if purser.hasMoreCommands() {
-			purser.advance()
+		if parser.hasMoreCommands() {
+			parser.advance()
 			continue
 		}
 		break

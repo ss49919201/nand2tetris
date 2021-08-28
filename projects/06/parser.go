@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// purserモジュール
-type purser struct {
+// parserモジュール
+type parser struct {
 	file    *os.File
 	scanner *bufio.Scanner
 	command string
@@ -22,7 +22,7 @@ const (
 )
 
 // パーサーの初期化
-func newPurser() *purser {
+func newParser() *parser {
 	// fileを開く
 	filePath := os.Args[1]
 	file, err := os.Open(filePath)
@@ -30,7 +30,7 @@ func newPurser() *purser {
 	scanner := bufio.NewScanner(file)
 	scanner.Scan()
 	command := scanner.Text()
-	return &purser{
+	return &parser{
 		file:    file,
 		scanner: scanner,
 		command: command,
@@ -38,17 +38,17 @@ func newPurser() *purser {
 }
 
 // 入力にまだコマンドが存在するか
-func (p *purser) hasMoreCommands() bool {
+func (p *parser) hasMoreCommands() bool {
 	return p.scanner.Scan()
 }
 
 // 次のコマンドを読み現在のコマンドにする
-func (p *purser) advance() {
+func (p *parser) advance() {
 	p.command = p.scanner.Text()
 }
 
 // 現在のコマンドの種類を返す
-func (p *purser) commandType() command {
+func (p *parser) commandType() command {
 	c := strings.Trim(p.command, " ")
 	var cs []string
 	if strings.Contains(c, " ") {
@@ -74,7 +74,7 @@ func (p *purser) commandType() command {
 
 // 現在のコマンド@Xxxまたは(Xxx)のXxxを文字列で返す
 // コマンドがA_COMMANDまたはL_COMMANDの時だけ呼ぶ
-func (p *purser) symbol() string {
+func (p *parser) symbol() string {
 	c := strings.Trim(p.command, " ")
 	switch string(c[0]) {
 	case "@":
@@ -91,7 +91,7 @@ func (p *purser) symbol() string {
 
 // 現在のC命令のdestニーモニックを返す（8つの可能性なので定数化する）
 // コマンドがC_COMMANDの時だけ呼ぶ
-func (p *purser) dest() string {
+func (p *parser) dest() string {
 	c := strings.Trim(p.command, " ")
 	cs := strings.Split(c, " ")
 
@@ -104,7 +104,7 @@ func (p *purser) dest() string {
 
 // 現在のC命令のcompニーモニックを返す（28個の可能性なので定数化する）
 // コマンドがC_COMMANDの時だけ呼ぶ
-func (p *purser) comp() string {
+func (p *parser) comp() string {
 	c := strings.Trim(p.command, " ")
 	cs := strings.Split(c, " ")
 
@@ -121,7 +121,7 @@ func (p *purser) comp() string {
 
 // 現在のC命令のjumpニーモニックを返す（8つの可能性なので定数化する）
 // コマンドがC_COMMANDの時だけ呼ぶ
-func (p *purser) jump() string {
+func (p *parser) jump() string {
 	c := strings.Trim(p.command, " ")
 	cs := strings.Split(c, " ")
 
