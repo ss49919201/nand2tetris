@@ -20,14 +20,14 @@ func main() {
 		panic(err)
 	}
 
+	codeWriter := newCodeWriter(file)
+	defer codeWriter.close()
+
 	if isDir(file) {
 		files, err := file.ReadDir(0)
 		if err != nil {
 			panic(err)
 		}
-
-		codeWriter := newCodeWriter(file)
-		defer codeWriter.close()
 
 		for _, file := range files {
 			d := filepath.Join(filePath, file.Name())
@@ -44,9 +44,4 @@ func main() {
 		}
 		return
 	}
-
-	codeWriter := newCodeWriter(file)
-	defer codeWriter.close()
-	parser := newParser(file)
-	defer parser.close()
 }
