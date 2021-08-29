@@ -2,20 +2,17 @@ tools
 
 tmp
 
-projects/*/*txt
-projects/*/*cmp
-projects/*/*hdl
-projects/*/*asm
-projects/*/*tst
-
-projects/*/*/*txt
-projects/*/*/*cmp
-projects/*/*/*hdl
-projects/*/*/*asm
-projects/*/*/*tst
-
-projects/*/*/*/*txt
-projects/*/*/*/*cmp
-projects/*/*/*/*hdl
-projects/*/*/*/*asm
-projects/*/*/*/*tst
+*txt
+*cmp
+*hdl
+*asm
+*tst
+*hack
+*jack
+*vm
+*html
+*pdf
+*xml
+*iml
+*gif
+*out
