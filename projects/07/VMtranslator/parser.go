@@ -27,12 +27,6 @@ type parser struct {
 }
 
 func newParser(file *os.File) *parser {
-	// fileを開く
-	filePath := os.Args[1]
-	file, err := os.Open(filePath)
-	if err != nil {
-		panic(err)
-	}
 	scanner := bufio.NewScanner(file)
 	return &parser{
 		input:   file,
@@ -83,8 +77,15 @@ func (p *parser) commandType() command {
 	case "call":
 		return C_CALL
 	default:
-		panic("invalid command")
+		return -1
 	}
+}
+
+// コマンド自体を返す
+func (p *parser) commandItself() string {
+	c := trimComment(p.command)
+	cs := splitByHalfSpace(c)
+	return cs[0]
 }
 
 // 第1引数を返す
@@ -113,7 +114,7 @@ func (p *parser) arg2() string {
 
 	c := trimComment(p.command)
 	cs := splitByHalfSpace(c)
-	if len(cs) == 3 {
+	if len(cs) != 3 {
 		panic("invalid command")
 	}
 

@@ -1,55 +1,38 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"io"
 	"os"
-	"path/filepath"
 	"strconv"
-	"time"
+	"strings"
 )
 
 type codeWriter struct {
-	input           []*os.File
-	output          *os.File
-	tmpSegmentCount int
+	input        []*os.File
+	output       *os.File
+	outputText   io.Writer
+	labelCounter int
 }
 
 func newCodeWriter(file *os.File) *codeWriter {
-	input := make([]*os.File, 0)
-	if isDir(file) {
-		files, err := file.ReadDir(0)
-		if err != nil {
-			panic(err)
-		}
-		for _, f := range files {
-			path := filepath.Join(file.Name(), f.Name())
-			if f.Type().IsDir() {
-				panic("can't translate directory")
-			}
-			inputFile, err := os.Open(path)
-			if err != nil {
-				panic(err)
-			}
-			input = append(input, inputFile)
-		}
-	}
-	output, err := os.Create(file.Name())
+	fileName := strings.Split(file.Name(), ".vm")[0] + ".asm"
+	output, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
 	}
 
+	buf := bytes.NewBuffer([]byte{})
+
 	return &codeWriter{
-		tmpSegmentCount: 5,
-		input:           input,
-		output:          output,
+		output:       output,
+		outputText:   buf,
+		labelCounter: 0,
 	}
 }
 
-func (c *codeWriter) updateTmpSegmentCount() {
-	if c.tmpSegmentCount == 12 {
-		return
-	}
-	c.tmpSegmentCount++
+func (c *codeWriter) updateLabelCounter() {
+	c.labelCounter++
 }
 
 func (c *codeWriter) setFileName(fileName string) {
@@ -61,7 +44,9 @@ func (c *codeWriter) setFileName(fileName string) {
 }
 
 func (c *codeWriter) writeArthmethic(command string) {
-	unique := strconv.Itoa(int(time.Now().Unix()))
+	unique := strconv.Itoa(c.labelCounter)
+	c.updateLabelCounter()
+
 	trueLabel := "(TRUE_" + unique + ")"
 	falseLabel := "(FALSE_" + unique + ")"
 	nextLabel := "(NEXT_" + unique + ")"
@@ -71,111 +56,199 @@ func (c *codeWriter) writeArthmethic(command string) {
 
 	switch command {
 	case "add":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=M-1\n",
-			"D=D+M\n",
-			"M=D",
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"A=A-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=M+D\n" +
+				"A=A-1\n" +
+				"M=D\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n",
 		)
 	case "sub":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=M-1\n",
-			"D=D-M\n",
-			"M=D",
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"A=A-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=D-M\n" +
+				"A=A-1\n" +
+				"M=D\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n",
 		)
-	case "ng":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=-D\n",
-			"M=D",
+	case "neg":
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"D=-D\n" +
+				"M=D\n",
 		)
 	case "gt":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=M-1\n",
-			"D=D-M\n",
-			trueACoomand+"\n",
-			"@D;JEQ\n",
-			falseACoomand+"\n",
-			"D;JNE\n",
-			trueLabel+"\n",
-			"@SP\n",
-			"M=-1\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			falseLabel+"\n",
-			"@SP\n",
-			"M=0\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			nextLabel,
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=D-M\n" +
+				trueACoomand + "\n" +
+				"D;JGT\n" +
+				falseACoomand + "\n" +
+				"0;JMP\n" +
+				trueLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=-1\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				falseLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=0\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				nextLabel + "\n",
 		)
 	case "lt":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=M-1\n",
-			"D=D-M\n",
-			trueACoomand+"\n",
-			"D;JEQ\n",
-			falseACoomand+"\n",
-			"D;JNE\n",
-			trueLabel+"\n",
-			"@SP\n",
-			"M=-1\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			falseLabel+"\n",
-			"@SP\n",
-			"M=0\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			nextLabel,
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=D-M\n" +
+				trueACoomand + "\n" +
+				"D;JLT\n" +
+				falseACoomand + "\n" +
+				"0;JMP\n" +
+				trueLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=-1\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				falseLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=0\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				nextLabel + "\n",
 		)
 	case "eq":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=M-1\n",
-			"D=D-M\n",
-			trueACoomand+"\n",
-			"D;JEQ\n",
-			falseACoomand+"\n",
-			"D;JNEP\n",
-			trueLabel+"\n",
-			"@SP\n",
-			"M=-1\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			falseLabel+"\n",
-			"@SP\n",
-			"M=0\n",
-			nextACoomand+"\n",
-			"0;JMP\n",
-			nextLabel,
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=M-D\n" +
+				trueACoomand + "\n" +
+				"D;JEQ\n" +
+				falseACoomand + "\n" +
+				"D;JNE\n" +
+				trueLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=-1\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				falseLabel + "\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=0\n" +
+				nextACoomand + "\n" +
+				"0;JMP\n" +
+				nextLabel + "\n",
 		)
 	case "and":
-		fmt.Fprintln(c.output,
-			"@SP-1\n",
-			"D=M\n",
-			"@SP\n",
-			"D=D&M\n",
-			"@SP\n",
-			"M=D",
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=D&M\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=D\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n",
 		)
 	case "or":
-		fmt.Fprintln(c.output,
-			"@SP-1\n",
-			"D=M\n",
-			"@SP\n",
-			"D=D|M\n",
-			"@SP\n",
-			"M=D",
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"M=M-1\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"D=D|M\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"M=D\n" +
+				"@SP\n" +
+				"A=M\n" +
+				"M=0\n",
 		)
 	case "not":
-		fmt.Fprintln(c.output,
-			"@SP\n",
-			"D=D!\n",
-			"M=D",
+		c.output.WriteString(
+			"\n// " + command + "\n" +
+				"@SP\n" +
+				"A=M-1\n" +
+				"D=M\n" +
+				"D=!D\n" +
+				"M=D\n",
 		)
 	}
 }
@@ -187,19 +260,28 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 	case "push":
 		switch segment {
 		case "static":
-			fmt.Fprintln(c.output,
-				"@"+segment+"."+strIndex+"\n",
-				"D=M\n",
-				"@SP\n",
-				"M=D",
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@" + segment + "." + strIndex + "\n" +
+					"A=M\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=D\n" +
+					"@SP\n" +
+					"M=M+1\n",
 			)
 			return
 		case "constant":
-			fmt.Fprintln(c.output,
-				"@"+strIndex+"\n",
-				"D=A\n",
-				"@SP\n",
-				"M=D",
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@" + strIndex + "\n" +
+					"D=A\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=D\n" +
+					"@SP\n" +
+					"M=M+1\n",
 			)
 			return
 		case "pointer":
@@ -207,51 +289,96 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			if index == 1 {
 				target = "THAT"
 			}
-			fmt.Fprintln(c.output,
-				"@"+target+"\n",
-				"D=M",
-				"@SP\n",
-				"M=D\n",
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@" + target + "\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=D\n" +
+					"@SP\n" +
+					"M=M+1\n",
 			)
 			return
 		default:
-			fmt.Fprintln(c.output,
-				"@"+segment+"\n",
-				"D=M+"+strIndex+"\n",
-				"@SP\n",
-				`M=D`,
+			setSegmentAddr := "D=M"
+			if segment == "temp" {
+				setSegmentAddr = "D=A"
+			}
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@" + c.getRegister(segment) + "\n" +
+					setSegmentAddr + "\n" +
+					"@" + strIndex + "\n" +
+					"A=D+A\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=D\n" +
+					"@SP\n" +
+					"M=M+1\n",
 			)
 		}
 	case "pop":
 		switch segment {
 		case "static":
-			fmt.Fprintln(c.output,
-				"@SP\n",
-				"D=M\n",
-				"@"+segment+"."+strIndex+"\n",
-				"M=D",
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@SP\n" +
+					"M=M-1\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=0\n" +
+					"@" + segment + ".\n" + strIndex + "\n" +
+					"M=D\n",
 			)
-			c.updateTmpSegmentCount()
 			return
 		case "pointer":
 			target := "THIS"
 			if index == 1 {
 				target = "THAT"
 			}
-			fmt.Fprintln(c.output,
-				"@SP\n",
-				"D=M\n",
-				"@"+target+"\n",
-				"M=D",
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@SP\n" +
+					"M=M-1\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=0\n" +
+					"@" + target + "\n" +
+					"M=D\n",
 			)
 			return
 		default:
-			fmt.Fprintln(c.output,
-				"@SP\n",
-				"D=M",
-				"@"+segment+"\n",
-				"A=A+"+strIndex+"\n",
-				"M=D",
+			setSegmentAddr := "D=M"
+			if segment == "temp" {
+				setSegmentAddr = "D=A"
+			}
+			c.output.WriteString(
+				"\n// " + command + " " + segment + " " + strIndex + "\n" +
+					"@SP\n" +
+					"M=M-1\n" +
+					"@" + c.getRegister(segment) + "\n" +
+					setSegmentAddr + "\n" +
+					"@" + strIndex + "\n" +
+					"D=D+A\n" +
+					"@R13\n" +
+					"M=D\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"D=M\n" +
+					"@SP\n" +
+					"A=M\n" +
+					"M=0\n" +
+					"@R13\n" +
+					"A=M\n" +
+					"M=D\n",
 			)
 		}
 	case "label":
@@ -266,6 +393,23 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 		return
 	case "call":
 		return
+	}
+}
+
+func (c *codeWriter) getRegister(segment string) string {
+	switch segment {
+	case "local":
+		return "LCL"
+	case "argument":
+		return "ARG"
+	case "this":
+		return "THIS"
+	case "that":
+		return "THAT"
+	case "temp":
+		return "R5"
+	default:
+		panic(segment + " is invalid segment")
 	}
 }
 

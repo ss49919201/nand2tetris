@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"path/filepath"
+	"strconv"
 )
 
 func isDir(file *os.File) bool {
@@ -23,25 +23,53 @@ func main() {
 	codeWriter := newCodeWriter(file)
 	defer codeWriter.close()
 
-	if isDir(file) {
-		files, err := file.ReadDir(0)
-		if err != nil {
-			panic(err)
+	// if isDir(file) {
+	// 	files, err := file.ReadDir(0)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	for _, file := range files {
+	// 		d := filepath.Join(filePath, file.Name())
+	// 		if file.Type().IsDir() {
+	// 			panic("can't translate directory")
+	// 		}
+	// 		f, err := os.Open(d)
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+
+	// 		parser := newParser(f)
+	// 		defer parser.close()
+	// 	}
+	// 	return
+	// }
+
+	parser := newParser(file)
+	defer parser.close()
+
+	codeWriter.setFileName(file.Name())
+	codeWriter.close()
+
+	for {
+		if !parser.hasMoreCommands() {
+			break
 		}
 
-		for _, file := range files {
-			d := filepath.Join(filePath, file.Name())
-			if file.Type().IsDir() {
-				panic("can't translate directory")
-			}
-			f, err := os.Open(d)
-			if err != nil {
-				panic(err)
-			}
+		parser.advance()
+		cm := parser.command
 
-			parser := newParser(f)
-			defer parser.close()
+		if len(cm) > 0 {
+			switch parser.commandType() {
+			case C_ARITHMETIC:
+				codeWriter.writeArthmethic(cm)
+			case C_PUSH, C_POP:
+				index, err := strconv.Atoi(parser.arg2())
+				if err != nil {
+					panic(err)
+				}
+				codeWriter.writePushPop(parser.commandItself(), parser.arg1(), index)
+			}
 		}
-		return
 	}
 }
