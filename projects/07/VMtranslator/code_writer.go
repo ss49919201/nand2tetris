@@ -395,6 +395,20 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 	}
 }
 
+func (c *codeWriter) writeInit() {}
+
+func (c *codeWriter) writeLabel(label string) {}
+
+func (c *codeWriter) writeGoto(label string) {}
+
+func (c *codeWriter) writeIf(label string) {}
+
+func (c *codeWriter) writeCall(functionName string, numArgs int) {}
+
+func (c *codeWriter) writeReturn() {}
+
+func (c *codeWriter) writeFunction(functionName string, numLocals int) {}
+
 func (c *codeWriter) getRegister(segment string) string {
 	switch segment {
 	case "local":
