@@ -332,7 +332,7 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"@SP\n" +
 					"A=M\n" +
 					"M=0\n" +
-					"@" + segment + ".\n" + strIndex + "\n" +
+					"@" + segment + "." + strIndex + "\n" +
 					"M=D\n",
 			)
 			return
