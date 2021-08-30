@@ -263,7 +263,6 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			c.output.WriteString(
 				"\n// " + command + " " + segment + " " + strIndex + "\n" +
 					"@" + segment + "." + strIndex + "\n" +
-					"A=M\n" +
 					"D=M\n" +
 					"@SP\n" +
 					"A=M\n" +
