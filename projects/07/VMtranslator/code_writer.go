@@ -380,26 +380,25 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"M=D\n",
 			)
 		}
-	case "label":
-		return
-	case "goto":
-		return
-	case "if-goto":
-		return
-	case "function":
-		return
-	case "return":
-		return
-	case "call":
-		return
 	}
 }
 
 func (c *codeWriter) writeInit() {}
 
-func (c *codeWriter) writeLabel(label string) {}
+func (c *codeWriter) writeLabel(label string) {
+	c.output.WriteString(
+		"\n// " + "label " + label + "\n" +
+			"(" + label + ")" + "\n",
+	)
+}
 
-func (c *codeWriter) writeGoto(label string) {}
+func (c *codeWriter) writeGoto(label string) {
+	c.output.WriteString(
+		"\n// " + "goto " + label + "\n" +
+			"@" + label + "\n" +
+			"0;JMP\n",
+	)
+}
 
 func (c *codeWriter) writeIf(label string) {}
 
