@@ -400,7 +400,22 @@ func (c *codeWriter) writeGoto(label string) {
 	)
 }
 
-func (c *codeWriter) writeIf(label string) {}
+func (c *codeWriter) writeIf(label string) {
+	c.output.WriteString(
+		"\n// " + "goto " + label + "\n" +
+			"@SP" + "\n" +
+			"M=M-1" + "\n" +
+			"@SP" + "\n" +
+			"A=M" + "\n" +
+			"D=M" + "\n" +
+			"@SP" + "\n" +
+			"A=M" + "\n" +
+			"M=0" + "\n" +
+			// Dが0でなければJumpする
+			"@" + label + "\n" +
+			"D;JNE\n",
+	)
+}
 
 func (c *codeWriter) writeCall(functionName string, numArgs int) {}
 
