@@ -138,5 +138,7 @@ func splitByHalfSpace(s string) []string {
 func trimComment(src string) string {
 	ss := strings.Split(src, "//")
 	ss[len(ss)-1] = strings.TrimRight(ss[len(ss)-1], " ")
-	return ss[0]
+	s := strings.TrimRight(ss[0], " ")
+	s = strings.TrimRight(s, "\t")
+	return s
 }
