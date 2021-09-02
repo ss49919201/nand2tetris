@@ -402,7 +402,7 @@ func (c *codeWriter) writeGoto(label string) {
 
 func (c *codeWriter) writeIf(label string) {
 	c.output.WriteString(
-		"\n// " + "goto " + label + "\n" +
+		"\n// " + "if-goto " + label + "\n" +
 			"@SP" + "\n" +
 			"M=M-1" + "\n" +
 			"@SP" + "\n" +

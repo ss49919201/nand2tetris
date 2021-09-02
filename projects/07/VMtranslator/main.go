@@ -69,6 +69,12 @@ func main() {
 					panic(err)
 				}
 				codeWriter.writePushPop(parser.commandItself(), parser.arg1(), index)
+			case C_LABEL:
+				codeWriter.writeLabel(parser.arg1())
+			case C_GOTO:
+				codeWriter.writeGoto(parser.arg1())
+			case C_IF:
+				codeWriter.writeIf(parser.arg1())
 			}
 		}
 	}
