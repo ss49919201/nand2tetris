@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type codeWriter struct {
@@ -300,9 +301,9 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			)
 			return
 		default:
-			setSegmentAddr := "D=M"
-			if segment == "temp" {
-				setSegmentAddr = "D=A"
+			setSegmentAddr := "D=A"
+			if segment == "local" || segment == "arguments" || segment == "this" || segment == "that" {
+				setSegmentAddr = "D=M"
 			}
 			c.output.WriteString(
 				"\n// " + command + " " + segment + " " + strIndex + "\n" +
@@ -355,9 +356,9 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			)
 			return
 		default:
-			setSegmentAddr := "D=M"
-			if segment == "temp" {
-				setSegmentAddr = "D=A"
+			setSegmentAddr := "D=A"
+			if segment == "local" || segment == "arguments" || segment == "this" || segment == "that" {
+				setSegmentAddr = "D=M"
 			}
 			c.output.WriteString(
 				"\n// " + command + " " + segment + " " + strIndex + "\n" +
@@ -417,11 +418,50 @@ func (c *codeWriter) writeIf(label string) {
 	)
 }
 
-func (c *codeWriter) writeCall(functionName string, numArgs int) {}
+func (c *codeWriter) writeCall(functionName string, numArgs int) {
+	returnAddress := "return-address-" + strconv.Itoa(int(time.Now().Unix()))
+	c.output.WriteString(
+		"\n// " + "call " + functionName + strconv.Itoa(numArgs) + "\n",
+	)
+	c.writePushPop("push", returnAddress, 0)
+	c.writePushPop("push", "local", 0)
+	c.writePushPop("push", "arguments", 0)
+	c.writePushPop("push", "this", 0)
+	c.writePushPop("push", "that", 0)
+	c.output.WriteString(
+		"\n@ARG\n" +
+			"D=M\n" +
+			"@5\n" +
+			"D=D-A\n" +
+			"@" + strconv.Itoa(numArgs) + "\n" +
+			"D=D-A\n" +
+			"@ARG\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"D=M\n" +
+			"@LCL\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"D=D-A\n",
+	)
+	c.writeGoto(functionName)
+	c.writeLabel(returnAddress)
+}
 
-func (c *codeWriter) writeReturn() {}
+func (c *codeWriter) writeReturn() {
 
-func (c *codeWriter) writeFunction(functionName string, numLocals int) {}
+}
+
+func (c *codeWriter) writeFunction(functionName string, numLocals int) {
+	c.output.WriteString(
+		"\n// " + "function " + functionName + strconv.Itoa(numLocals) + "\n" +
+			"(" + functionName + ")" + "\n",
+	)
+	for i := 0; i < numLocals; i++ {
+		c.output.WriteString("\t")
+		c.writePushPop("push", "local", i)
+	}
+}
 
 func (c *codeWriter) getRegister(segment string) string {
 	switch segment {
@@ -436,7 +476,7 @@ func (c *codeWriter) getRegister(segment string) string {
 	case "temp":
 		return "R5"
 	default:
-		panic(segment + " is invalid segment")
+		return segment
 	}
 }
 
