@@ -1,16 +1,16 @@
 package main
 
 import (
+	"log"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func isDir(file *os.File) bool {
 	_, err := file.ReadDir(0)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
 func main() {
@@ -19,37 +19,105 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer file.Close()
 
-	codeWriter := newCodeWriter(file)
+	if isDir(file) {
+		file.Seek(0, 0)
+		files, err := file.ReadDir(0)
+		if err != nil {
+			panic(err)
+		}
+
+		codeWriter := newCodeWriter(file)
+		defer codeWriter.close()
+
+		// ブートローダーチェック
+		for i, file := range files {
+			if file.Name() == "Sys.vm" {
+				files = append([]os.DirEntry{file}, append(files[:i], files[i+1:]...)...)
+			}
+		}
+
+		for _, file := range files {
+			path := filepath.Join(filePath, file.Name())
+
+			// 拡張子チェック
+			sPath := strings.Split(path, ".")
+			if sPath[len(sPath)-1] != "vm" {
+				log.Printf("%s is not vm file", file.Name())
+				continue
+			}
+			f, err := os.Open(path)
+			if err != nil {
+				panic(err)
+			}
+
+			parser := newParser(f)
+			defer parser.close()
+
+			codeWriter.setFileName(f.Name())
+
+			if strings.Split(path, "/")[len(strings.Split(path, "/"))-1] == "Sys.vm" {
+				codeWriter.writeBootload()
+			}
+
+			for {
+				if !parser.hasMoreCommands() {
+					break
+				}
+
+				parser.advance()
+				cm := parser.command
+
+				if len(cm) > 0 {
+					switch parser.commandType() {
+					case C_ARITHMETIC:
+						codeWriter.writeArthmethic(parser.commandItself())
+					case C_PUSH, C_POP:
+						index, err := strconv.Atoi(parser.arg2())
+						if err != nil {
+							panic(err)
+						}
+						codeWriter.writePushPop(parser.commandItself(), parser.arg1(), index)
+					case C_LABEL:
+						codeWriter.writeLabel(parser.arg1())
+					case C_GOTO:
+						codeWriter.writeGoto(parser.arg1())
+					case C_IF:
+						codeWriter.writeIf(parser.arg1())
+					case C_FUNCTION:
+						numLocal, err := strconv.Atoi(parser.arg2())
+						if err != nil {
+							panic(err)
+						}
+						codeWriter.writeFunction(parser.arg1(), numLocal)
+					case C_RETURN:
+						codeWriter.writeReturn()
+					case C_CALL:
+						numLocal, err := strconv.Atoi(parser.arg2())
+						if err != nil {
+							panic(err)
+						}
+						codeWriter.writeCall(parser.arg1(), numLocal)
+					}
+				}
+			}
+		}
+		return
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	codeWriter := newCodeWriter(f)
 	defer codeWriter.close()
 
-	// if isDir(file) {
-	// 	files, err := file.ReadDir(0)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	for _, file := range files {
-	// 		d := filepath.Join(filePath, file.Name())
-	// 		if file.Type().IsDir() {
-	// 			panic("can't translate directory")
-	// 		}
-	// 		f, err := os.Open(d)
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-
-	// 		parser := newParser(f)
-	// 		defer parser.close()
-	// 	}
-	// 	return
-	// }
-
-	parser := newParser(file)
+	parser := newParser(f)
 	defer parser.close()
 
-	codeWriter.setFileName(file.Name())
-	codeWriter.close()
+	codeWriter.setFileName(f.Name())
 
 	for {
 		if !parser.hasMoreCommands() {

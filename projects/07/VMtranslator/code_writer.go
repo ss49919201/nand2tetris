@@ -18,6 +18,10 @@ type codeWriter struct {
 
 func newCodeWriter(file *os.File) *codeWriter {
 	fileName := strings.Split(file.Name(), ".vm")[0] + ".asm"
+	if isDir(file) {
+		sPath := strings.Split(file.Name(), "/")
+		fileName = file.Name() + "/" + sPath[len(sPath)-1] + ".asm"
+	}
 	output, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
@@ -384,8 +388,6 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 	}
 }
 
-func (c *codeWriter) writeInit() {}
-
 func (c *codeWriter) writeLabel(label string) {
 	c.output.WriteString(
 		"\n// " + "label " + label + "\n" +
@@ -419,13 +421,22 @@ func (c *codeWriter) writeIf(label string) {
 }
 
 func (c *codeWriter) writeCall(functionName string, numArgs int) {
-	returnAddress := "return-address-" + strconv.Itoa(int(time.Now().Unix()))
+	returnAddress := "RETURN" + strconv.Itoa(int(time.Now().Unix()))
 	c.output.WriteString(
 		"\n// " + "call " + functionName + strconv.Itoa(numArgs) + "\n",
 	)
-	c.writePushPop("push", returnAddress, 0)
+	c.output.WriteString(
+		"// push return address\n" +
+			"@" + returnAddress + "\n" +
+			"D=A\n" +
+			"@SP\n" +
+			"A=M\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"M=M+1\n",
+	)
 	c.writePushPop("push", "local", 0)
-	c.writePushPop("push", "arguments", 0)
+	c.writePushPop("push", "argument", 0)
 	c.writePushPop("push", "this", 0)
 	c.writePushPop("push", "that", 0)
 	c.output.WriteString(
@@ -440,9 +451,7 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 			"@SP\n" +
 			"D=M\n" +
 			"@LCL\n" +
-			"M=D\n" +
-			"@SP\n" +
-			"D=D-A\n",
+			"M=D\n",
 	)
 	c.writeGoto(functionName)
 	c.writeLabel(returnAddress)
@@ -459,7 +468,7 @@ func (c *codeWriter) writeReturn() {
 			"M=D\n" +
 			"@5\n" +
 			"D=A\n" +
-			"@FEAME\n" +
+			"@FRAME\n" +
 			"D=M-D\n" +
 			"@RET\n" +
 			"M=D\n",
@@ -510,6 +519,7 @@ func (c *codeWriter) writeReturn() {
 }
 
 func (c *codeWriter) writeFunction(functionName string, numLocals int) {
+	c.output.WriteString("\n// ------------- Start Function -------------\n")
 	c.output.WriteString(
 		"\n// " + "function " + functionName + strconv.Itoa(numLocals) + "\n" +
 			"(" + functionName + ")" + "\n",
@@ -518,6 +528,19 @@ func (c *codeWriter) writeFunction(functionName string, numLocals int) {
 		c.output.WriteString("\t")
 		c.writePushPop("push", "constant", 0)
 	}
+	c.output.WriteString("\n// ------------- End Function -------------\n")
+}
+
+func (c *codeWriter) writeBootload() {
+	c.output.WriteString("\n// ------------- Start Bootload -------------\n")
+	c.output.WriteString(
+		"@256" + "\n" +
+			"D=A" + "\n" +
+			"@SP" + "\n" +
+			"M=D" + "\n",
+	)
+	c.writeCall("Sys.init", 0)
+	c.output.WriteString("// ------------- End Bootload -------------\n")
 }
 
 func (c *codeWriter) getRegister(segment string) string {
