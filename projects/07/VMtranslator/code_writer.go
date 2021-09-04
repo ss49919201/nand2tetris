@@ -411,9 +411,6 @@ func (c *codeWriter) writeIf(label string) {
 			"@SP" + "\n" +
 			"A=M" + "\n" +
 			"D=M" + "\n" +
-			"@SP" + "\n" +
-			"A=M" + "\n" +
-			"M=0" + "\n" +
 			// Dが0でなければJumpする
 			"@" + label + "\n" +
 			"D;JNE\n",
@@ -421,7 +418,10 @@ func (c *codeWriter) writeIf(label string) {
 }
 
 func (c *codeWriter) writeCall(functionName string, numArgs int) {
-	returnAddress := "RETURN" + strconv.Itoa(int(time.Now().Unix()))
+	returnAddress := "RETURN" + strconv.Itoa(int(time.Now().UnixMicro()))
+	c.output.WriteString(
+		"\n// ------------ start call " + functionName + strconv.Itoa(numArgs) + "-------------- \n",
+	)
 	c.output.WriteString(
 		"\n// " + "call " + functionName + strconv.Itoa(numArgs) + "\n",
 	)
@@ -435,12 +435,48 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 			"@SP\n" +
 			"M=M+1\n",
 	)
-	c.writePushPop("push", "local", 0)
-	c.writePushPop("push", "argument", 0)
-	c.writePushPop("push", "this", 0)
-	c.writePushPop("push", "that", 0)
 	c.output.WriteString(
-		"\n@ARG\n" +
+		"\n// push local \n" +
+			"@LCL\n" +
+			"D=M\n" +
+			"@SP\n" +
+			"A=M\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"M=M+1\n",
+	)
+	c.output.WriteString(
+		"\n// push argument \n" +
+			"@ARG\n" +
+			"D=M\n" +
+			"@SP\n" +
+			"A=M\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"M=M+1\n",
+	)
+	c.output.WriteString(
+		"\n// push this \n" +
+			"@THIS\n" +
+			"D=M\n" +
+			"@SP\n" +
+			"A=M\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"M=M+1\n",
+	)
+	c.output.WriteString(
+		"\n// push that \n" +
+			"@THAT\n" +
+			"D=M\n" +
+			"@SP\n" +
+			"A=M\n" +
+			"M=D\n" +
+			"@SP\n" +
+			"M=M+1\n",
+	)
+	c.output.WriteString(
+		"\n@SP\n" +
 			"D=M\n" +
 			"@5\n" +
 			"D=D-A\n" +
@@ -455,6 +491,9 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 	)
 	c.writeGoto(functionName)
 	c.writeLabel(returnAddress)
+	c.output.WriteString(
+		"\n// ------------ end call " + functionName + strconv.Itoa(numArgs) + "-------------- \n",
+	)
 }
 
 func (c *codeWriter) writeReturn() {
@@ -462,18 +501,20 @@ func (c *codeWriter) writeReturn() {
 		"\n// " + "return\n",
 	)
 	c.output.WriteString(
-		"\n@LCL\n" +
+		"\n// FRAME = LCL\n" +
+			"@LCL\n" +
 			"D=M\n" +
-			"@FRAME\n" +
+			"@R7\n" +
 			"M=D\n" +
+			"// RET = *(FRAME-5)\n" +
 			"@5\n" +
 			"D=A\n" +
-			"@FRAME\n" +
+			"@R7\n" +
 			"D=M-D\n" +
-			"@RET\n" +
+			"@R14\n" +
 			"M=D\n",
 	)
-	// *ARG=pop()
+	c.output.WriteString("// *ARG=pop()\n")
 	c.writePushPop("pop", "argument", 0)
 	c.output.WriteString(
 		"\n// SP=ARG+1\n" +
@@ -482,28 +523,31 @@ func (c *codeWriter) writeReturn() {
 			"@SP\n" +
 			"M=D\n" +
 			"\n// THAT=*(FRAME-1)\n" +
-			"@FRAME\n" +
+			"@R7\n" +
 			"D=M\n" +
 			"@1\n" +
 			"A=D-A\n" +
 			"D=M\n" +
 			"@THAT\n" +
 			"M=D\n" +
-			"@FRAME\n" +
+			"\n// THIS=*(FRAME-2)\n" +
+			"@R7\n" +
 			"D=M\n" +
 			"@2\n" +
 			"A=D-A\n" +
 			"D=M\n" +
 			"@THIS\n" +
 			"M=D\n" +
-			"@FRAME\n" +
+			"\n// ARG=*(FRAME-3)\n" +
+			"@R7\n" +
 			"D=M\n" +
 			"@3\n" +
 			"A=D-A\n" +
 			"D=M\n" +
 			"@ARG\n" +
 			"M=D\n" +
-			"@FRAME\n" +
+			"\n// LCL=*(FRAME-4)\n" +
+			"@R7\n" +
 			"D=M\n" +
 			"@4\n" +
 			"A=D-A\n" +
@@ -512,7 +556,8 @@ func (c *codeWriter) writeReturn() {
 			"M=D\n",
 	)
 	c.output.WriteString(
-		"@RET\n" +
+		"// goto RET\n" +
+			"@R14\n" +
 			"A=M\n" +
 			"0;JMP\n",
 	)

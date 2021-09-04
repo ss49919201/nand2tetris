@@ -31,12 +31,7 @@ func main() {
 		codeWriter := newCodeWriter(file)
 		defer codeWriter.close()
 
-		// ブートローダーチェック
-		for i, file := range files {
-			if file.Name() == "Sys.vm" {
-				files = append([]os.DirEntry{file}, append(files[:i], files[i+1:]...)...)
-			}
-		}
+		codeWriter.writeBootload()
 
 		for _, file := range files {
 			path := filepath.Join(filePath, file.Name())
@@ -56,10 +51,6 @@ func main() {
 			defer parser.close()
 
 			codeWriter.setFileName(f.Name())
-
-			if strings.Split(path, "/")[len(strings.Split(path, "/"))-1] == "Sys.vm" {
-				codeWriter.writeBootload()
-			}
 
 			for {
 				if !parser.hasMoreCommands() {
