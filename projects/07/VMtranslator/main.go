@@ -75,6 +75,20 @@ func main() {
 				codeWriter.writeGoto(parser.arg1())
 			case C_IF:
 				codeWriter.writeIf(parser.arg1())
+			case C_FUNCTION:
+				numLocal, err := strconv.Atoi(parser.arg2())
+				if err != nil {
+					panic(err)
+				}
+				codeWriter.writeFunction(parser.arg1(), numLocal)
+			case C_RETURN:
+				codeWriter.writeReturn()
+			case C_CALL:
+				numLocal, err := strconv.Atoi(parser.arg2())
+				if err != nil {
+					panic(err)
+				}
+				codeWriter.writeCall(parser.arg1(), numLocal)
 			}
 		}
 	}

@@ -449,7 +449,65 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 }
 
 func (c *codeWriter) writeReturn() {
-
+	c.output.WriteString(
+		"\n// " + "return\n",
+	)
+	// c.writePushPop("push", returnAddress, 0)
+	// c.writePushPop("push", "local", 0)
+	// c.writePushPop("push", "arguments", 0)
+	// c.writePushPop("push", "this", 0)
+	// c.writePushPop("push", "that", 0)
+	c.output.WriteString(
+		"\n@LCL\n" +
+			"D=M\n" +
+			"@FRAME\n" +
+			"M=D\n" +
+			"@5\n" +
+			"D=A\n" +
+			"@FEAME\n" +
+			"D=M-D\n" +
+			"@RET\n" +
+			"M=D\n" +
+			"@ARG\n" +
+			"A=M\n" +
+			"D=M\n",
+	)
+	c.writePushPop("pop", "arguments", 0)
+	c.output.WriteString(
+		"\n@ARG\n" +
+			"D=M+1\n" +
+			"@SP\n" +
+			"M=D\n" +
+			"@FRAME\n" +
+			"D=M\n" +
+			"@1\n" +
+			"A=D-A\n" +
+			"D=M\n" +
+			"@THAT\n" +
+			"M=D\n" +
+			"@FRAME\n" +
+			"D=M\n" +
+			"@2\n" +
+			"A=D-A\n" +
+			"D=M\n" +
+			"@THIS\n" +
+			"M=D\n" +
+			"@FRAME\n" +
+			"D=M\n" +
+			"@3\n" +
+			"A=D-A\n" +
+			"D=M\n" +
+			"@ARG\n" +
+			"M=D\n" +
+			"@FRAME\n" +
+			"D=M\n" +
+			"@4\n" +
+			"A=D-A\n" +
+			"D=M\n" +
+			"@LCL\n" +
+			"M=D\n",
+	)
+	c.writeGoto("RET")
 }
 
 func (c *codeWriter) writeFunction(functionName string, numLocals int) {
