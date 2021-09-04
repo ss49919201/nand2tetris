@@ -302,7 +302,7 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			return
 		default:
 			setSegmentAddr := "D=A"
-			if segment == "local" || segment == "arguments" || segment == "this" || segment == "that" {
+			if segment == "local" || segment == "argument" || segment == "this" || segment == "that" {
 				setSegmentAddr = "D=M"
 			}
 			c.output.WriteString(
@@ -357,7 +357,7 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 			return
 		default:
 			setSegmentAddr := "D=A"
-			if segment == "local" || segment == "arguments" || segment == "this" || segment == "that" {
+			if segment == "local" || segment == "argument" || segment == "this" || segment == "that" {
 				setSegmentAddr = "D=M"
 			}
 			c.output.WriteString(
@@ -452,11 +452,6 @@ func (c *codeWriter) writeReturn() {
 	c.output.WriteString(
 		"\n// " + "return\n",
 	)
-	// c.writePushPop("push", returnAddress, 0)
-	// c.writePushPop("push", "local", 0)
-	// c.writePushPop("push", "arguments", 0)
-	// c.writePushPop("push", "this", 0)
-	// c.writePushPop("push", "that", 0)
 	c.output.WriteString(
 		"\n@LCL\n" +
 			"D=M\n" +
@@ -467,17 +462,17 @@ func (c *codeWriter) writeReturn() {
 			"@FEAME\n" +
 			"D=M-D\n" +
 			"@RET\n" +
-			"M=D\n" +
-			"@ARG\n" +
-			"A=M\n" +
-			"D=M\n",
+			"M=D\n",
 	)
-	c.writePushPop("pop", "arguments", 0)
+	// *ARG=pop()
+	c.writePushPop("pop", "argument", 0)
 	c.output.WriteString(
-		"\n@ARG\n" +
+		"\n// SP=ARG+1\n" +
+			"@ARG\n" +
 			"D=M+1\n" +
 			"@SP\n" +
 			"M=D\n" +
+			"\n// THAT=*(FRAME-1)\n" +
 			"@FRAME\n" +
 			"D=M\n" +
 			"@1\n" +
@@ -507,7 +502,11 @@ func (c *codeWriter) writeReturn() {
 			"@LCL\n" +
 			"M=D\n",
 	)
-	c.writeGoto("RET")
+	c.output.WriteString(
+		"@RET\n" +
+			"A=M\n" +
+			"0;JMP\n",
+	)
 }
 
 func (c *codeWriter) writeFunction(functionName string, numLocals int) {
@@ -517,7 +516,7 @@ func (c *codeWriter) writeFunction(functionName string, numLocals int) {
 	)
 	for i := 0; i < numLocals; i++ {
 		c.output.WriteString("\t")
-		c.writePushPop("push", "local", i)
+		c.writePushPop("push", "constant", 0)
 	}
 }
 
