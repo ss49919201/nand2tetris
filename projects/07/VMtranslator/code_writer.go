@@ -262,13 +262,16 @@ func (c *codeWriter) writeArthmethic(command string) {
 func (c *codeWriter) writePushPop(command, segment string, index int) {
 	strIndex := strconv.Itoa(index)
 
+	splitedFilePath := strings.Split(c.input[len(c.input)-1].Name(), "/")
+	staticPrefix := strings.TrimRight(splitedFilePath[len(splitedFilePath)-1], ".vm")
+
 	switch command {
 	case "push":
 		switch segment {
 		case "static":
 			c.output.WriteString(
 				"\n// " + command + " " + segment + " " + strIndex + "\n" +
-					"@" + segment + "." + strIndex + "\n" +
+					"@" + staticPrefix + "." + strIndex + "\n" +
 					"D=M\n" +
 					"@SP\n" +
 					"A=M\n" +
@@ -334,7 +337,7 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"@SP\n" +
 					"A=M\n" +
 					"D=M\n" +
-					"@" + segment + "." + strIndex + "\n" +
+					"@" + staticPrefix + "." + strIndex + "\n" +
 					"M=D\n",
 			)
 			return
