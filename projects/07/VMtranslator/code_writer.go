@@ -1,38 +1,38 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type codeWriter struct {
-	input        []*os.File
-	output       *os.File
-	outputText   io.Writer
-	labelCounter int
+	input                []*os.File
+	output               *os.File
+	labelCounter         int
+	returnAddressCounter int
+	function             string
 }
 
 func newCodeWriter(file *os.File) *codeWriter {
+	// 出力ファイル名の決定
 	fileName := strings.Split(file.Name(), ".vm")[0] + ".asm"
 	if isDir(file) {
 		sPath := strings.Split(file.Name(), "/")
 		fileName = file.Name() + "/" + sPath[len(sPath)-1] + ".asm"
 	}
+
+	// 出力ファイルの作成
 	output, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
 	}
 
-	buf := bytes.NewBuffer([]byte{})
-
 	return &codeWriter{
-		output:       output,
-		outputText:   buf,
-		labelCounter: 0,
+		output:               output,
+		labelCounter:         0,
+		returnAddressCounter: 0,
+		function:             "",
 	}
 }
 
@@ -46,6 +46,7 @@ func (c *codeWriter) setFileName(fileName string) {
 		panic(err)
 	}
 	c.input = append(c.input, f)
+	c.function = ""
 }
 
 func (c *codeWriter) writeArthmethic(command string) {
@@ -333,9 +334,6 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"@SP\n" +
 					"A=M\n" +
 					"D=M\n" +
-					"@SP\n" +
-					"A=M\n" +
-					"M=0\n" +
 					"@" + segment + "." + strIndex + "\n" +
 					"M=D\n",
 			)
@@ -352,9 +350,6 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"@SP\n" +
 					"A=M\n" +
 					"D=M\n" +
-					"@SP\n" +
-					"A=M\n" +
-					"M=0\n" +
 					"@" + target + "\n" +
 					"M=D\n",
 			)
@@ -377,9 +372,6 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 					"@SP\n" +
 					"A=M\n" +
 					"D=M\n" +
-					"@SP\n" +
-					"A=M\n" +
-					"M=0\n" +
 					"@R13\n" +
 					"A=M\n" +
 					"M=D\n",
@@ -389,6 +381,9 @@ func (c *codeWriter) writePushPop(command, segment string, index int) {
 }
 
 func (c *codeWriter) writeLabel(label string) {
+	if c.function != "" {
+		label = c.function + "$" + label
+	}
 	c.output.WriteString(
 		"\n// " + "label " + label + "\n" +
 			"(" + label + ")" + "\n",
@@ -396,6 +391,9 @@ func (c *codeWriter) writeLabel(label string) {
 }
 
 func (c *codeWriter) writeGoto(label string) {
+	if c.function != "" {
+		label = c.function + "$" + label
+	}
 	c.output.WriteString(
 		"\n// " + "goto " + label + "\n" +
 			"@" + label + "\n" +
@@ -404,6 +402,9 @@ func (c *codeWriter) writeGoto(label string) {
 }
 
 func (c *codeWriter) writeIf(label string) {
+	if c.function != "" {
+		label = c.function + "$" + label
+	}
 	c.output.WriteString(
 		"\n// " + "if-goto " + label + "\n" +
 			"@SP" + "\n" +
@@ -418,7 +419,15 @@ func (c *codeWriter) writeIf(label string) {
 }
 
 func (c *codeWriter) writeCall(functionName string, numArgs int) {
-	returnAddress := "RETURN" + strconv.Itoa(int(time.Now().UnixMicro()))
+	returnAddress := "RETURN" + strconv.Itoa(c.returnAddressCounter)
+	c.returnAddressCounter++
+
+	var stashedFunction string
+	if c.function != "" {
+		stashedFunction = c.function
+		c.function = ""
+	}
+
 	c.output.WriteString(
 		"\n// ------------ start call " + functionName + strconv.Itoa(numArgs) + "-------------- \n",
 	)
@@ -476,14 +485,18 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 			"M=M+1\n",
 	)
 	c.output.WriteString(
-		"\n@SP\n" +
+		"\n// ARG=SP-n-5\n" +
+			"@SP\n" +
 			"D=M\n" +
 			"@5\n" +
 			"D=D-A\n" +
 			"@" + strconv.Itoa(numArgs) + "\n" +
 			"D=D-A\n" +
 			"@ARG\n" +
-			"M=D\n" +
+			"M=D\n",
+	)
+	c.output.WriteString(
+		"// LCL=SP\n" +
 			"@SP\n" +
 			"D=M\n" +
 			"@LCL\n" +
@@ -494,6 +507,10 @@ func (c *codeWriter) writeCall(functionName string, numArgs int) {
 	c.output.WriteString(
 		"\n// ------------ end call " + functionName + strconv.Itoa(numArgs) + "-------------- \n",
 	)
+
+	if stashedFunction != "" {
+		c.function = stashedFunction
+	}
 }
 
 func (c *codeWriter) writeReturn() {
@@ -506,15 +523,16 @@ func (c *codeWriter) writeReturn() {
 			"D=M\n" +
 			"@R7\n" +
 			"M=D\n" +
-			"// RET = *(FRAME-5)\n" +
+			"\n// RET = *(FRAME-5)\n" +
 			"@5\n" +
 			"D=A\n" +
 			"@R7\n" +
-			"D=M-D\n" +
+			"A=M-D\n" +
+			"D=M\n" +
 			"@R14\n" +
 			"M=D\n",
 	)
-	c.output.WriteString("// *ARG=pop()\n")
+	c.output.WriteString("\n// *ARG=pop()")
 	c.writePushPop("pop", "argument", 0)
 	c.output.WriteString(
 		"\n// SP=ARG+1\n" +
@@ -556,7 +574,7 @@ func (c *codeWriter) writeReturn() {
 			"M=D\n",
 	)
 	c.output.WriteString(
-		"// goto RET\n" +
+		"\n// goto RET\n" +
 			"@R14\n" +
 			"A=M\n" +
 			"0;JMP\n",
@@ -564,16 +582,16 @@ func (c *codeWriter) writeReturn() {
 }
 
 func (c *codeWriter) writeFunction(functionName string, numLocals int) {
-	c.output.WriteString("\n// ------------- Start Function -------------\n")
+	c.function = functionName
+	c.output.WriteString("\n// ------------- Declare Function -------------\n")
 	c.output.WriteString(
-		"\n// " + "function " + functionName + strconv.Itoa(numLocals) + "\n" +
+		"\n// " + "function " + functionName + " " + strconv.Itoa(numLocals) + "\n" +
 			"(" + functionName + ")" + "\n",
 	)
 	for i := 0; i < numLocals; i++ {
 		c.output.WriteString("\t")
 		c.writePushPop("push", "constant", 0)
 	}
-	c.output.WriteString("\n// ------------- End Function -------------\n")
 }
 
 func (c *codeWriter) writeBootload() {
