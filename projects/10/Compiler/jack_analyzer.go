@@ -8,8 +8,8 @@ import (
 )
 
 type jackAnalyzer struct {
-	inputs []*os.File
-	output *os.File
+	inputs             []*os.File
+	outputFileNameBase string
 }
 
 func newJackAnalyzer(file *os.File) *jackAnalyzer {
@@ -18,6 +18,8 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 	_, err := file.ReadDir(0)
 	if err == nil {
 		// ディレクトリのケース
+		jackAnalyzer.outputFileNameBase = file.Name()
+
 		file.Seek(0, 0)
 		files, err := file.ReadDir(0)
 		if err != nil {
@@ -28,11 +30,11 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 			path := filepath.Join(file.Name(), f.Name())
 
 			// 拡張子チェック
-			sPath := strings.Split(path, ".")
-			if sPath[len(sPath)-1] != "jack" {
+			if jackAnalyzer.isJackFile(f.Name()) {
 				log.Printf("%s is not jack file", f.Name())
 				continue
 			}
+
 			input, err := os.Open(path)
 			if err != nil {
 				panic(err)
@@ -42,9 +44,15 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 		}
 	} else {
 		// ファイルのケース
+		jackAnalyzer.outputFileNameBase = strings.TrimRight(file.Name(), "")
 		jackAnalyzer.inputs = append(jackAnalyzer.inputs, file)
 	}
 	return jackAnalyzer
+}
+
+func (j *jackAnalyzer) isJackFile(filePath string) bool {
+	s := strings.Split(filePath, ".")
+	return s[len(s)-1] != "jack"
 }
 
 func (j *jackAnalyzer) Close() {
