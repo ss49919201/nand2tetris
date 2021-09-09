@@ -47,4 +47,8 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 	return jackAnalyzer
 }
 
-func (j *jackAnalyzer) Close() {}
+func (j *jackAnalyzer) Close() {
+	for _, input := range j.inputs {
+		input.Close()
+	}
+}
