@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -76,7 +77,7 @@ func main() {
 	codeWriter.writeBootload()
 
 	if isDir(file) {
-		file.Seek(0, 0)
+		file.Seek(0, io.SeekStart)
 		files, err := file.ReadDir(0)
 		if err != nil {
 			panic(err)

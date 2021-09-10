@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 		// ディレクトリのケース
 		jackAnalyzer.outputFileNameBase = file.Name()
 
-		file.Seek(0, 0)
+		file.Seek(0, io.SeekStart)
 		files, err := file.ReadDir(0)
 		if err != nil {
 			panic(err)
