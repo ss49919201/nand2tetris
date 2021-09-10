@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 func isDir(file *os.File) bool {
@@ -87,8 +86,7 @@ func main() {
 			path := filepath.Join(filePath, file.Name())
 
 			// 拡張子チェック
-			sPath := strings.Split(path, ".")
-			if sPath[len(sPath)-1] != "vm" {
+			if filepath.Ext(file.Name()) != ".vm" {
 				log.Printf("%s is not vm file", file.Name())
 				continue
 			}
