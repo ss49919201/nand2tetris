@@ -14,5 +14,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = newJackAnalyzer(file)
+	n := newJackAnalyzer(file)
+	defer n.Close()
 }
