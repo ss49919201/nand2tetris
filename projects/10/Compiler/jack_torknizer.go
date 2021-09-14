@@ -7,16 +7,16 @@ type jackTokenizer struct {
 	output *os.File
 }
 
-func newJackTokenizer(inputs []*os.File, outputFileNameBase string) *jackTokenizer {
+func newJackTokenizer(inputs []*os.File, outputFileNameBase string) (*jackTokenizer, error) {
 	jackTokenizer := new(jackTokenizer)
 
 	jackTokenizer.inputs = inputs
 
 	output, err := os.Create(outputFileNameBase + "T.xml")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	jackTokenizer.output = output
 
-	return jackTokenizer
+	return jackTokenizer, nil
 }

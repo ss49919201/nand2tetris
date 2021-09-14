@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -13,7 +14,7 @@ type jackAnalyzer struct {
 	outputFileNameBase string
 }
 
-func newJackAnalyzer(file *os.File) *jackAnalyzer {
+func newJackAnalyzer(file *os.File) (*jackAnalyzer, error) {
 	jackAnalyzer := new(jackAnalyzer)
 	// ディレクトリであるか確認
 	_, err := file.ReadDir(0)
@@ -24,7 +25,7 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 		file.Seek(0, io.SeekStart)
 		files, err := file.ReadDir(0)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		for _, f := range files {
@@ -38,7 +39,7 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 
 			input, err := os.Open(path)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			// FIXME: cap
 			jackAnalyzer.inputs = append(jackAnalyzer.inputs, input)
@@ -48,7 +49,7 @@ func newJackAnalyzer(file *os.File) *jackAnalyzer {
 		jackAnalyzer.outputFileNameBase = strings.TrimRight(file.Name(), "")
 		jackAnalyzer.inputs = append(jackAnalyzer.inputs, file)
 	}
-	return jackAnalyzer
+	return jackAnalyzer, nil
 }
 
 func (j *jackAnalyzer) isJackFile(filePath string) bool {
@@ -56,8 +57,13 @@ func (j *jackAnalyzer) isJackFile(filePath string) bool {
 	return s[len(s)-1] != "jack"
 }
 
-func (j *jackAnalyzer) Close() {
+func (j *jackAnalyzer) close() {
 	for _, input := range j.inputs {
 		input.Close()
 	}
+}
+
+func (j *jackAnalyzer) analyze() error {
+	_, _ = newJackTokenizer(j.inputs, j.outputFileNameBase)
+	return errors.New("not implement")
 }

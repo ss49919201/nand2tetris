@@ -1,19 +1,42 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
 
+func exitAnalyze(err error) {
+	fmt.Println(".")
+	fmt.Println(".")
+	fmt.Println(".")
+	log.Println(err)
+	fmt.Println("fail analyze😢")
+	os.Exit(1)
+}
+
 func main() {
-	log.Println("start analyze")
+	fmt.Println("start analyze😶")
+	fmt.Println(".")
+	fmt.Println(".")
+	fmt.Println(".")
+
 	log.Printf("command line args: %s", os.Args[1:])
 
 	// Open File
 	file, err := os.Open(os.Args[1])
 	if err != nil {
-		panic(err)
+		exitAnalyze(err)
 	}
-	n := newJackAnalyzer(file)
-	defer n.Close()
+	n, err := newJackAnalyzer(file)
+	if err != nil {
+		exitAnalyze(err)
+	}
+	defer n.close()
+
+	if err := n.analyze(); err != nil {
+		exitAnalyze(err)
+	}
+
+	fmt.Println("complete analyze😋")
 }
