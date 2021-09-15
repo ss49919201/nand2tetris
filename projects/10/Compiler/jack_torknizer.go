@@ -5,6 +5,7 @@ import "os"
 type jackTokenizer struct {
 	inputs []*os.File
 	output *os.File
+	token  string
 }
 
 func newJackTokenizer(inputs []*os.File, outputFileNameBase string) (*jackTokenizer, error) {
@@ -19,4 +20,9 @@ func newJackTokenizer(inputs []*os.File, outputFileNameBase string) (*jackTokeni
 	jackTokenizer.output = output
 
 	return jackTokenizer, nil
+}
+
+// 行から1文字ずつ取り出し何らかのトークンに一致するか
+func (j *jackTokenizer) hasMoreTokens() bool {
+	return false
 }
