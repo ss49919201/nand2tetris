@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"os"
+	"strings"
 )
 
 type jackTokenizer struct {
@@ -11,6 +12,7 @@ type jackTokenizer struct {
 	output  *os.File
 	token   string
 	text    string
+	textPos int
 	scanner *bufio.Scanner
 }
 
@@ -30,7 +32,7 @@ func newJackTokenizer(inputs []*os.File, outputFileNameBase string) (*jackTokeni
 	return jackTokenizer, nil
 }
 
-// 現在のファイルにテキストは存在するか
+// 現在のファイルに次の行は存在するか
 func (j *jackTokenizer) hasMoreText() bool {
 	return j.scanner.Scan()
 }
@@ -44,5 +46,16 @@ func (j *jackTokenizer) nextText() {
 
 // 行から1文字ずつ取り出し何らかのトークンに一致するか
 func (j *jackTokenizer) hasMoreTokens() bool {
+	var token []string
+	textSlice := strings.Split(j.text[j.textPos+1:], "")
+
+	for _, char := range textSlice {
+		j.textPos++
+		token = append(token, char)
+		// if j.isToken(token) {
+		// 	j.token = token
+		// 	return true
+		// }
+	}
 	return false
 }
